@@ -1,37 +1,27 @@
 import dash
-from dash.dependencies import Input, Output
 import dash_core_components as dcc
 import dash_html_components as html
-from pandas_datareader import data as web
-from datetime import datetime as dt
+import os
 
-app = dash.Dash()
+app = dash.Dash(__name__)
+server = app.server
+
+app.css.append_css({"external_url": "https://codepen.io/chriddyp/pen/bWLwgP.css"})
 
 app.layout = html.Div([
-    html.H1('Fuel Fighter Car'),
+    html.H2('Hello World'),
     dcc.Dropdown(
-        id='my-dropdown',
-        options=[
-            {'label': 'Speed', 'value': 'Speed'},
-            {'label': 'Position', 'value': 'TSLA'},
-            {'label': 'Apple', 'value': 'AAPL'}
-        ],
-        value='Coke'
+        id='dropdown',
+        options=[{'label': i, 'value': i} for i in ['LA', 'NYC', 'MTL']],
+        value='LA'
     ),
-    dcc.Graph(id='my-graph')
+    html.Div(id='display-value')
 ])
 
-@app.callback(Output('my-graph', 'figure'), [Input('my-dropdown', 'value')])
-def update_graph(selected_dropdown_value):
-    df = web.DataReader(
-        selected_dropdown_value, data_source='google',
-        start=dt(2017, 1, 1), end=dt.now())
-    return {
-        'data': [{
-            'x': df.index,
-            'y': df.Close
-        }]
-    }
+@app.callback(dash.dependencies.Output('display-value', 'children'),
+              [dash.dependencies.Input('dropdown', 'value')])
+def display_value(value):
+    return 'You have selected "{}"'.format(value)
 
 if __name__ == '__main__':
-    app.run_server()
+    app.run_server(debug=True)
