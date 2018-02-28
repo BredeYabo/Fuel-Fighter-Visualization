@@ -4,11 +4,11 @@ import dash_html_components as html
 import os
 from dash.dependencies import Input, Output
 
+app = dash.Dash(__name__)
+server = app.server
 import numpy as np
 import pandas as pd
 from datetime import datetime as dt
-
-app = dash.Dash()
 
 
 app.layout = html.Div([
