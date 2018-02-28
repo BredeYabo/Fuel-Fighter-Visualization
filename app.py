@@ -2,49 +2,36 @@ import dash
 import dash_core_components as dcc
 import dash_html_components as html
 import os
+from dash.dependencies import Input, Output
 
-app = dash.Dash(__name__)
-server = app.server
+import numpy as np
+import pandas as pd
+from datetime import datetime as dt
 
-app.css.append_css({"external_url": "https://codepen.io/chriddyp/pen/bWLwgP.css"})
+app = dash.Dash()
 
-
-colors = {
-    'background': '#111111',
-    'text': '#7FDBFF'
-}
 
 app.layout = html.Div([
-    html.H2('Fuel Fighter Visualizer'),
+    html.H1('Fuel Fighter'),
     dcc.Dropdown(
         id='dropdown',
-        options=[{'label': i, 'value': i} for i in ['Speed', 'Acceleration', 'Position']],
-        value='Meters'
+        options=[
+            {'label': 'Position', 'value': 'Position'},
+        ],
+        value='Position'
     ),
-    html.Div(id='display-value'),
-
-    dcc.Graph(
-        id='example-graph-2',
-        figure={
-            'data': [
-                {'x': [1, 2, 3], 'y': [4, 1, 2], 'type': 'bar', 'name': 'SF'},
-                {'x': [1, 2, 3], 'y': [2, 4, 5], 'type': 'bar', 'name': u'Montréal'},
-            ],
-            'layout': {
-                'plot_bgcolor': colors['background'],
-                'paper_bgcolor': colors['background'],
-                'font': {
-                    'color': colors['text']
-                }
-            }
-        }
-    )
+    dcc.Graph(id='Test')
 ])
 
-@app.callback(dash.dependencies.Output('display-value', 'children'),
-              [dash.dependencies.Input('dropdown', 'value')])
-def display_value(value):
-    return 'You have selected "{}"'.format(value)
+@app.callback(Output('Test', 'figure'), [Input('dropdown', 'value')])
+def update_graph(selected_dropdown_value):
+    df = pd.read_csv('sample.csv')
+    return {
+        'data': [{
+            'x': df.x,
+            't': df.t
+        }]
+    }
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run_server()
