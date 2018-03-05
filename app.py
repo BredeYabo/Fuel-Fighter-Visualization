@@ -108,8 +108,6 @@ def update_graph(data_names):
             fill="tozeroy",
             fillcolor="#6897bb"
             )
-
-        time.sleep(1)
         graphs.append(html.Div(dcc.Graph(
             id=data_name,
             animate=True,
