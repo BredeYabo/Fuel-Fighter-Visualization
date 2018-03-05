@@ -52,6 +52,7 @@ def update_obd_values(times, speeds, rpms, position, slope, accelerometer):
         createCSV.createCSV()
         # getCSV_S3() 
         df = pd.read_csv('sample.csv')
+        time.sleep(0.5) # Ensure data is read before appending
 
         speeds.append(int(df.Speeds))
         rpms.append(int(df.RPM))
@@ -108,6 +109,7 @@ def update_graph(data_names):
             fillcolor="#6897bb"
             )
 
+        time.sleep(1)
         graphs.append(html.Div(dcc.Graph(
             id=data_name,
             animate=True,
