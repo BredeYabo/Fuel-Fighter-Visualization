@@ -2,29 +2,35 @@ import dash
 import io
 import dash_core_components as dcc
 import dash_html_components as html
+#from flask_caching import Cache
 import os
 import time
 import random
 from collections import deque
 from dash.dependencies import Input, Output, Event
 from pandas_datareader.data import DataReader
-
-app = dash.Dash(__name__)
 import plotly.graph_objs as go
-server = app.server
 import numpy as np
 import pandas as pd
 from datetime import datetime as dt
+import boto3
 
+
+app = dash.Dash(__name__)
+server = app.server
+
+# Caching for better performance
+# cache = Cache(server, config={
+    # try 'filesystem' if you don't want to setup redis
+    # 'CACHE_TYPE': 'redis',
+    # 'CACHE_REDIS_URL': os.environ.get('REDIS_URL', '')
+    # })
+# app.config.suppress_callback_exceptions = True
 
 ## Downloading the CSV file from S3 bucket
 # Boto 3
-import boto3
-
 BUCKET_NAME = 'ff-fipy-csv'
 KEY = 'sample.csv'
-
-
 
 max_length = 50
 times = deque(maxlen=max_length)
@@ -42,7 +48,6 @@ data_dict = {
         }
 
 def update_obd_values(times, speeds, rpms, position, slope, accelerometer):
-
     times.append(time.time())
     if len(times) == 1:
         #starting relevant values
@@ -74,7 +79,7 @@ app.layout = html.Div([
     html.Div(children=html.Div(id='graphs'), className='row'),
     dcc.Interval(
         id='graph-update',
-        interval=5000),
+        interval=1000),
     ], className="container",style={'width':'98%','margin-left':10,'margin-right':10,'max-width':50000})
 
 
@@ -116,15 +121,6 @@ def update_graph(data_names):
     return graphs
 
 
-
-# CSS
-external_css = ["https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.2/css/materialize.min.css"]
-for css in external_css:
-    app.css.append_css({"external_url": css})
-
-external_js = ['https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.2/js/materialize.min.js']
-for js in external_css:
-    app.scripts.append_script({'external_url': js})
 
 # @app.callback(Output('live-graph', 'figure'), [Input('dropdown', 'value')])
 # def update_graph(selected_dropdown_value):
