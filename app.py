@@ -28,8 +28,6 @@ cache = Cache(server, config={
     })
 app.config.suppress_callback_exceptions = True
 
-## Downloading the CSV file from S3 bucket
-# Boto 3
 BUCKET_NAME = 'ff-fipy-csv'
 KEY = 'sample.csv'
 
@@ -51,16 +49,18 @@ data_dict = {
 def update_obd_values(times, speeds, rpms, position, slope, accelerometer):
     times.append(time.time())
     if len(times) == 1:
-        #starting relevant values
-        speeds.append(random.randrange(180,230))
-        rpms.append(random.randrange(1000,9500))
-        position.append(random.randrange(95,115))
-        slope.append(random.randrange(30,140))
-        accelerometer.append(random.randrange(10,90))
+        createCSV.createCSV()
+        # getCSV_S3() 
+        df = pd.read_csv('sample.csv')
+
+        speeds.append(int(df.Speeds))
+        rpms.append(int(df.RPM))
+        position.append(int(df.GPS))
+        slope.append(int(df.Slope))
+        accelerometer.append(int(df.Accelerometer))
     else:
         for data_of_interest in [speeds, position, rpms, slope, accelerometer]:
             data_of_interest.append(data_of_interest[-1]+data_of_interest[-1]*random.uniform(-0.0001,0.0001))
-
     return times, speeds, rpms, position, slope, accelerometer
 
 times, speeds, rpms, position, slope, accelerometer = update_obd_values(times, speeds, rpms, position, slope, accelerometer)
@@ -99,9 +99,7 @@ def update_graph(data_names):
     else:
         class_choice = 'col s12'
 
-
     for data_name in data_names:
-
         data = go.Scatter(
             x=list(times),
             y=list(data_dict[data_name]),
@@ -120,28 +118,11 @@ def update_graph(data_names):
             ), className=class_choice))
 
     return graphs
-
-
-
-# @app.callback(Output('live-graph', 'figure'), [Input('dropdown', 'value')])
-# def update_graph(selected_dropdown_value):
-    # df = pd.read_csv('sample.csv')
-    # return {
-        # 'data': [{
-        #     'x': df.x,
-            # 't': df.t
-         # }]
-    # }
-
-
 s3 = boto3.resource('s3')
 # s3_client = boto3.client('s3')
 
-def getCSV():
+def getCSV_S3():
     s3.Bucket(BUCKET_NAME).download_file(KEY, 'sample.csv')
-
-# Example usage
-# pd_read_csv_s3("s3://my_bucket/my_folder/file.csv", skiprows=2)
 
 if __name__ == '__main__':
     app.run_server()
