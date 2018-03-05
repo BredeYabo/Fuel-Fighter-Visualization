@@ -2,7 +2,7 @@ import dash
 import io
 import dash_core_components as dcc
 import dash_html_components as html
-#from flask_caching import Cache
+from flask_caching import Cache
 import os
 import time
 import random
@@ -20,12 +20,12 @@ app = dash.Dash(__name__)
 server = app.server
 
 # Caching for better performance
-# cache = Cache(server, config={
+cache = Cache(server, config={
     # try 'filesystem' if you don't want to setup redis
-    # 'CACHE_TYPE': 'redis',
-    # 'CACHE_REDIS_URL': os.environ.get('REDIS_URL', '')
-    # })
-# app.config.suppress_callback_exceptions = True
+    'CACHE_TYPE': 'redis',
+    'CACHE_REDIS_URL': os.environ.get('REDIS_URL', '')
+    })
+app.config.suppress_callback_exceptions = True
 
 ## Downloading the CSV file from S3 bucket
 # Boto 3
@@ -73,13 +73,13 @@ app.layout = html.Div([
     dcc.Dropdown(id='vehicle-data-name',
                  options=[{'label': s, 'value': s}
                           for s in data_dict.keys()],
-                 value=['Coolant Temperature','Oil Temperature','Intake Temperature'],
+                 value=['Speed','RPM'],
                  multi=True
                  ),
     html.Div(children=html.Div(id='graphs'), className='row'),
     dcc.Interval(
         id='graph-update',
-        interval=1000),
+        interval=3000),
     ], className="container",style={'width':'98%','margin-left':10,'margin-right':10,'max-width':50000})
 
 
