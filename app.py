@@ -120,6 +120,13 @@ def update_graph(data_names):
     return graphs
 s3 = boto3.resource('s3')
 # s3_client = boto3.client('s3')
+external_css = ["https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.2/css/materialize.min.css"]
+for css in external_css:
+    app.css.append_css({"external_url": css})
+
+external_js = ['https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.2/js/materialize.min.js']
+for js in external_css:
+    app.scripts.append_script({'external_url': js})
 
 def getCSV_S3():
     s3.Bucket(BUCKET_NAME).download_file(KEY, 'sample.csv')
