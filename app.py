@@ -28,8 +28,13 @@ cache = Cache(server, config={
     })
 app.config.suppress_callback_exceptions = True
 
-BUCKET_NAME = 'ff-fipy-csv'
-KEY = 'sample.csv'
+s3 = boto3.resource('s3')
+# s3_client = boto3.client('s3')
+BUCKET_NAME = 'ff-fipy-test'
+KEY = 'ff.csv'
+def getCSV_S3():
+    s3.Bucket(BUCKET_NAME).download_file(KEY, 'ff.csv')
+
 
 max_length = 50
 times = deque(maxlen=max_length)
@@ -49,9 +54,9 @@ data_dict = {
 def update_obd_values(times, speeds, rpms, position, slope, accelerometer):
     times.append(time.time())
     if len(times) == 1:
-        createCSV.createCSV()
-        # getCSV_S3() 
-        df = pd.read_csv('sample.csv')
+        # createCSV.createCSV()
+        getCSV_S3()
+        df = pd.read_csv('ff.csv')
         time.sleep(0.5) # Ensure data is read before appending
 
         speeds.append(int(df.Speeds))
@@ -81,7 +86,7 @@ app.layout = html.Div([
     html.Div(children=html.Div(id='graphs'), className='row'),
     dcc.Interval(
         id='graph-update',
-        interval=3000),
+        interval=5000),
     ], className="container",style={'width':'98%','margin-left':10,'margin-right':10,'max-width':50000})
 
 
@@ -118,8 +123,6 @@ def update_graph(data_names):
             ), className=class_choice))
 
     return graphs
-s3 = boto3.resource('s3')
-# s3_client = boto3.client('s3')
 external_css = ["https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.2/css/materialize.min.css"]
 for css in external_css:
     app.css.append_css({"external_url": css})
@@ -129,7 +132,7 @@ for js in external_css:
     app.scripts.append_script({'external_url': js})
 
 def getCSV_S3():
-    s3.Bucket(BUCKET_NAME).download_file(KEY, 'sample.csv')
+    s3.Bucket(BUCKET_NAME).download_file(KEY, 'ff.csv')
 
 if __name__ == '__main__':
     app.run_server()
