@@ -39,3 +39,4 @@ pandas-datareader==0.6.0
 plotly==2.4.1
 redis
 flask-caching
+paho-mqtt
