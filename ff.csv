@@ -1,0 +1,2 @@
+"Time", "BMS_State", "BMS_PreChargeTimeout","BMS_LTC_LossOfSignal","BMS_OverVoltage","BMS_UnderVoltage","BMS_OverCurrent","BMS_OverTemp", "BMS_NoDataOnStartup", "BMS Battery Current", "BMS Battery Voltage"
+123,2,True,False,True,False,True,False,True,False,256,42000

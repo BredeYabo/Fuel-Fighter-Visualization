@@ -13,8 +13,6 @@ import plotly.graph_objs as go
 import numpy as np
 import pandas as pd
 from datetime import datetime as dt
-import boto3
-import createCSV
 
 
 app = dash.Dash(__name__)
@@ -28,48 +26,60 @@ cache = Cache(server, config={
     })
 app.config.suppress_callback_exceptions = True
 
-s3 = boto3.resource('s3')
-# s3_client = boto3.client('s3')
-BUCKET_NAME = 'ff-fipy-test'
-KEY = 'ff.csv'
-def getCSV_S3():
-    s3.Bucket(BUCKET_NAME).download_file(KEY, 'ff.csv')
-
-
-max_length = 50
+max_length = 100
 times = deque(maxlen=max_length)
-speeds = deque(maxlen=max_length)
-rpms = deque(maxlen=max_length)
-position = deque(maxlen=max_length)
-slope = deque(maxlen=max_length)
-accelerometer = deque(maxlen=max_length)
+BMS_State = deque(maxlen=max_length)
+BMS_PreChargeTimeout = deque(maxlen=max_length)
+BMS_LTC_LossOfSignal = deque(maxlen=max_length)
+BMS_OverVoltage = deque(maxlen=max_length)
+BMS_UnderVoltage = deque(maxlen=max_length)
+BMS_OverCurrent = deque(maxlen=max_length)
+BMS_OverTemp = deque(maxlen=max_length)
+BMS_NoDataOnStartup = deque(maxlen=max_length)
+BMS_Battery_Current = deque(maxlen=max_length)
+BMS_Battery_Voltage = deque(maxlen=max_length)
+
+
+
 data_dict = {
-        "Speed": speeds,
-        "RPM": rpms,
-        "GPS": position,
-        "Hill slope": slope,
-        "Accelerometer": accelerometer
+        "BMS State": BMS_State, # (0/1/2/3)
+        "BMS State": BMS_PreChargeTimeout, # Boolean
+        "BMS State": BMS_LTC_LossOfSignal,# Boolean
+        "BMS State": BMS_OverVoltage,# Boolean
+        "BMS State": BMS_UnderVoltage,# Boolean
+        "BMS State": BMS_OverCurrent,# Boolean
+        "BMS State": BMS_OverTemp,# Boolean
+        "BMS State": BMS_NoDataOnStartup,# Boolean
+        "BMS_Battery_Current": BMS_Battery_Current, # int
+        "BMS_Battery_Voltage": BMS_Battery_Voltage # int
         }
 
-def update_obd_values(times, speeds, rpms, position, slope, accelerometer):
-    times.append(time.time())
-    if len(times) == 1:
+def update_obd_values(times, BMS_State, BMS_PreChargeTimeout, BMS_LTC_LossOfSignal, BMS_OverVoltage, BMS_UnderVoltage, BMS_OverCurrent, BMS_OverTemp, BMS_NoDataOnStartup, BMS_Battery_Current, BMS_Battery_Voltage):
+    df = pd.read_csv('ff.csv')
+    # if len(times) == 1:
         # createCSV.createCSV()
-        getCSV_S3()
-        df = pd.read_csv('ff.csv')
-        time.sleep(0.5) # Ensure data is read before appending
 
-        speeds.append(int(df.Speeds))
-        rpms.append(int(df.RPM))
-        position.append(int(df.GPS))
-        slope.append(int(df.Slope))
-        accelerometer.append(int(df.Accelerometer))
-    else:
-        for data_of_interest in [speeds, position, rpms, slope, accelerometer]:
-            data_of_interest.append(data_of_interest[-1]+data_of_interest[-1]*random.uniform(-0.0001,0.0001))
-    return times, speeds, rpms, position, slope, accelerometer
+    times.append(int(df.Time))
+    BMS_State.append(int(df.BMS_State))
 
-times, speeds, rpms, position, slope, accelerometer = update_obd_values(times, speeds, rpms, position, slope, accelerometer)
+    # Error flags
+    BMS_PreChargeTimeout.append(bool(df.BMS_PreChargeTimeout))
+    BMS_LTC_LossOfSignal.append(bool(df.BMS_LTC_LossOfSignal))
+    BMS_OverVoltage.append(bool(df.BMS_OverVoltage))
+    BMS_UnderVoltage.append(bool(df.BMS_UnderVoltage))
+    BMS_OverCurrent.append(bool(df.BMS_OverCurrent))
+    BMS_OverTemp.append(bool(df.BMS_OverTemp))
+    BMS_NoDataOnStartup.append(bool(df.BMS_NoDataOnStartup))
+
+    # Battery
+    BMS_Battery_Current.append(int(df.BMS_Battery_Current))
+    BMS_Battery_Voltage.append(int(df.BMS_Battery_Voltage))
+    # else:
+    #     for data_of_interest in [speeds, position, rpms, slope, accelerometer]:
+            # data_of_interest.append(data_of_interest[-1]+data_of_interest[-1]*random.uniform(-0.0001,0.0001))
+    return times, BMS_State, BMS_PreChargeTimeout, BMS_LTC_LossOfSignal, BMS_OverVoltage, BMS_UnderVoltage, BMS_OverCurrent, BMS_OverTemp, BMS_NoDataOnStartup, BMS_Battery_Current, BMS_Battery_Voltage
+
+times, BMS_State, BMS_PreChargeTimeout, BMS_LTC_LossOfSignal, BMS_OverVoltage, BMS_UnderVoltage, BMS_OverCurrent, BMS_OverTemp, BMS_NoDataOnStartup, BMS_Battery_Current, BMS_Battery_Voltage =  update_obd_values(times, BMS_State, BMS_PreChargeTimeout, BMS_LTC_LossOfSignal, BMS_OverVoltage, BMS_UnderVoltage, BMS_OverCurrent, BMS_OverTemp, BMS_NoDataOnStartup, BMS_Battery_Current, BMS_Battery_Voltage)
 
 app.layout = html.Div([
     html.Div([
@@ -130,9 +140,6 @@ for css in external_css:
 external_js = ['https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.2/js/materialize.min.js']
 for js in external_css:
     app.scripts.append_script({'external_url': js})
-
-def getCSV_S3():
-    s3.Bucket(BUCKET_NAME).download_file(KEY, 'ff.csv')
 
 if __name__ == '__main__':
     app.run_server()
