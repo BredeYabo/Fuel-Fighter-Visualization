@@ -39,23 +39,21 @@ BMS_NoDataOnStartup = deque(maxlen=max_length)
 BMS_Battery_Current = deque(maxlen=max_length)
 BMS_Battery_Voltage = deque(maxlen=max_length)
 
-
-
 data_dict = {
         "BMS State": BMS_State, # (0/1/2/3)
-        "BMS State": BMS_PreChargeTimeout, # Boolean
-        "BMS State": BMS_LTC_LossOfSignal,# Boolean
-        "BMS State": BMS_OverVoltage,# Boolean
-        "BMS State": BMS_UnderVoltage,# Boolean
-        "BMS State": BMS_OverCurrent,# Boolean
-        "BMS State": BMS_OverTemp,# Boolean
-        "BMS State": BMS_NoDataOnStartup,# Boolean
+        "BMS_PreChargeTimeout": BMS_PreChargeTimeout, # Boolean
+        "BMS_LTC_LossOfSignal": BMS_LTC_LossOfSignal,# Boolean
+        "BMS_OverVoltage": BMS_OverVoltage,# Boolean
+        "BMS_UnderVoltage": BMS_UnderVoltage,# Boolean
+        "BMS_OverCurrent": BMS_OverCurrent,# Boolean
+        "BMS_OverTemp": BMS_OverTemp,# Boolean
+        "BMS_NoDataOnStartup": BMS_NoDataOnStartup,# Boolean
         "BMS_Battery_Current": BMS_Battery_Current, # int
         "BMS_Battery_Voltage": BMS_Battery_Voltage # int
         }
 
 def update_obd_values(times, BMS_State, BMS_PreChargeTimeout, BMS_LTC_LossOfSignal, BMS_OverVoltage, BMS_UnderVoltage, BMS_OverCurrent, BMS_OverTemp, BMS_NoDataOnStartup, BMS_Battery_Current, BMS_Battery_Voltage):
-    df = pd.read_csv('ff.csv')
+    df = pd.read_csv('sample.csv')
     # if len(times) == 1:
         # createCSV.createCSV()
 
@@ -63,13 +61,13 @@ def update_obd_values(times, BMS_State, BMS_PreChargeTimeout, BMS_LTC_LossOfSign
     BMS_State.append(int(df.BMS_State))
 
     # Error flags
-    BMS_PreChargeTimeout.append(bool(df.BMS_PreChargeTimeout))
-    BMS_LTC_LossOfSignal.append(bool(df.BMS_LTC_LossOfSignal))
-    BMS_OverVoltage.append(bool(df.BMS_OverVoltage))
-    BMS_UnderVoltage.append(bool(df.BMS_UnderVoltage))
-    BMS_OverCurrent.append(bool(df.BMS_OverCurrent))
-    BMS_OverTemp.append(bool(df.BMS_OverTemp))
-    BMS_NoDataOnStartup.append(bool(df.BMS_NoDataOnStartup))
+    BMS_PreChargeTimeout.append((df.BMS_PreChargeTimeout).bool())
+    BMS_LTC_LossOfSignal.append((df.BMS_LTC_LossOfSignal).bool())
+    BMS_OverVoltage.append((df.BMS_OverVoltage).bool())
+    BMS_UnderVoltage.append((df.BMS_UnderVoltage).bool())
+    BMS_OverCurrent.append((df.BMS_OverCurrent).bool())
+    BMS_OverTemp.append((df.BMS_OverTemp).bool())
+    BMS_NoDataOnStartup.append((df.BMS_NoDataOnStartup).bool())
 
     # Battery
     BMS_Battery_Current.append(int(df.BMS_Battery_Current))
@@ -107,7 +105,7 @@ app.layout = html.Div([
     )
 def update_graph(data_names):
     graphs = []
-    update_obd_values(times, speeds, position, rpms, slope, accelerometer)
+    update_obd_values(times, BMS_State, BMS_PreChargeTimeout, BMS_LTC_LossOfSignal, BMS_OverVoltage, BMS_UnderVoltage, BMS_OverCurrent, BMS_OverTemp, BMS_NoDataOnStartup, BMS_Battery_Current, BMS_Battery_Voltage)
     if len(data_names)>2:
         class_choice = 'col s12 m6 l4'
     elif len(data_names) == 2:
