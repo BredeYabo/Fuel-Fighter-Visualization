@@ -88,7 +88,7 @@ app.layout = html.Div([
     dcc.Dropdown(id='vehicle-data-name',
                  options=[{'label': s, 'value': s}
                           for s in data_dict.keys()],
-                 value=['Speed','RPM'],
+                 value=['BMS_State','BMS_UnderVoltage'],
                  multi=True
                  ),
     html.Div(children=html.Div(id='graphs'), className='row'),
