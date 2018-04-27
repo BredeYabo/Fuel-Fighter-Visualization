@@ -1,2 +1,0 @@
-Time,BMS_State,BMS_PreChargeTimeout,BMS_LTC_LossOfSignal,BMS_OverVoltage,BMS_UnderVoltage,BMS_OverCurrent,BMS_OverTemp,BMS_NoDataOnStartup,BMS_Battery_Current,BMS_Battery_Voltage
-1,1,True,False,True,False,True,False,True,11,21

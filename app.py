@@ -12,11 +12,16 @@ from pandas_datareader.data import DataReader
 import plotly.graph_objs as go
 import numpy as np
 import pandas as pd
+import psycopg2
 from datetime import datetime as dt
 
 
 app = dash.Dash(__name__)
 server = app.server
+
+# Start receiving messages
+os.system("python3 mqtt.py")
+
 
 # Caching for better performance
 cache = Cache(server, config={
@@ -26,7 +31,37 @@ cache = Cache(server, config={
     })
 app.config.suppress_callback_exceptions = True
 
-max_length = 100
+# Read database credentials
+config = configparser.ConfigParser()
+config.read("psql.conf")
+
+def ConfigSectionMap(section):
+    dict1 = {}
+    options = config.options(section)
+    for option in options:
+        try:
+            dict1[option] = config.get(section, option)
+            if dict1[option] == -1:
+                DebugPrint("skip: %s" % option)
+        except:
+            print("exception on %s!" % option)
+            dict1[option] = None
+    return dict1
+
+psql_db = ConfigSectionMap("Credentials")['dbname']
+psql_user = ConfigSectionMap("Credentials")['user']
+psql_pwd = ConfigSectionMap("Credentials")['password']
+
+
+# Connect to database
+try:
+    conn = psycopg2.connect(dbname=psql_db, user=psql_user, password=psql_pwd)
+except:
+    print("I am unable to connect to the database.")
+
+cur = conn.cursor()
+
+max_length = 1000
 times = deque(maxlen=max_length)
 BMS_State = deque(maxlen=max_length)
 BMS_PreChargeTimeout = deque(maxlen=max_length)
@@ -53,25 +88,24 @@ data_dict = {
         }
 
 def update_obd_values(times, BMS_State, BMS_PreChargeTimeout, BMS_LTC_LossOfSignal, BMS_OverVoltage, BMS_UnderVoltage, BMS_OverCurrent, BMS_OverTemp, BMS_NoDataOnStartup, BMS_Battery_Current, BMS_Battery_Voltage):
-    df = pd.read_csv('sample.csv')
-    # if len(times) == 1:
-        # createCSV.createCSV()
+    cur.execute("SELECT * FROM sensors ORDER BY times desc limit 1;")
+    n = cur.fetchone()
 
-    times.append(int(df.Time))
-    BMS_State.append(int(df.BMS_State))
+    times.append(n[0])
+    BMS_State.append(n[1])
 
     # Error flags
-    BMS_PreChargeTimeout.append((df.BMS_PreChargeTimeout).bool())
-    BMS_LTC_LossOfSignal.append((df.BMS_LTC_LossOfSignal).bool())
-    BMS_OverVoltage.append((df.BMS_OverVoltage).bool())
-    BMS_UnderVoltage.append((df.BMS_UnderVoltage).bool())
-    BMS_OverCurrent.append((df.BMS_OverCurrent).bool())
-    BMS_OverTemp.append((df.BMS_OverTemp).bool())
-    BMS_NoDataOnStartup.append((df.BMS_NoDataOnStartup).bool())
+    BMS_PreChargeTimeout.append(n[2])
+    BMS_LTC_LossOfSignal.append(n[3])
+    BMS_OverVoltage.append(n[4])
+    BMS_UnderVoltage.append(n[5])
+    BMS_OverCurrent.append(n[6])
+    BMS_OverTemp.append(n[7])
+    BMS_NoDataOnStartup.append(n[8])
 
     # Battery
-    BMS_Battery_Current.append(int(df.BMS_Battery_Current))
-    BMS_Battery_Voltage.append(int(df.BMS_Battery_Voltage))
+    BMS_Battery_Current.append(n[9])
+    BMS_Battery_Voltage.append(n[10])
     # else:
     #     for data_of_interest in [speeds, position, rpms, slope, accelerometer]:
             # data_of_interest.append(data_of_interest[-1]+data_of_interest[-1]*random.uniform(-0.0001,0.0001))
@@ -94,7 +128,7 @@ app.layout = html.Div([
     html.Div(children=html.Div(id='graphs'), className='row'),
     dcc.Interval(
         id='graph-update',
-        interval=5000),
+        interval=1000),
     ], className="container",style={'width':'98%','margin-left':10,'margin-right':10,'max-width':50000})
 
 
@@ -140,4 +174,4 @@ for js in external_css:
     app.scripts.append_script({'external_url': js})
 
 if __name__ == '__main__':
-    app.run_server()
+    app.run_server(debug=False, threaded=True)
