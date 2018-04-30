@@ -13,6 +13,7 @@ import plotly.graph_objs as go
 import numpy as np
 import pandas as pd
 import psycopg2
+import configparser
 from datetime import datetime as dt
 
 
@@ -20,8 +21,7 @@ app = dash.Dash(__name__)
 server = app.server
 
 # Start receiving messages
-os.system("python3 mqtt.py")
-
+# os.system("python3 mqqt.py 1")
 
 # Caching for better performance
 cache = Cache(server, config={
@@ -33,7 +33,8 @@ app.config.suppress_callback_exceptions = True
 
 # Read database credentials
 config = configparser.ConfigParser()
-config.read("psql.conf")
+config.read("/var/www/Fuel-Fighter-Visualization/psql.conf")
+a = 10
 
 def ConfigSectionMap(section):
     dict1 = {}
@@ -90,25 +91,24 @@ data_dict = {
 def update_obd_values(times, BMS_State, BMS_PreChargeTimeout, BMS_LTC_LossOfSignal, BMS_OverVoltage, BMS_UnderVoltage, BMS_OverCurrent, BMS_OverTemp, BMS_NoDataOnStartup, BMS_Battery_Current, BMS_Battery_Voltage):
     cur.execute("SELECT * FROM sensors ORDER BY times desc limit 1;")
     n = cur.fetchone()
+    print(n)
+    old_data = []
 
-    times.append(n[0])
-    BMS_State.append(n[1])
-
+    if(n != old_data):
+        old_data = n
+        times.append(n[0])
+        BMS_State.append(n[1])
     # Error flags
-    BMS_PreChargeTimeout.append(n[2])
-    BMS_LTC_LossOfSignal.append(n[3])
-    BMS_OverVoltage.append(n[4])
-    BMS_UnderVoltage.append(n[5])
-    BMS_OverCurrent.append(n[6])
-    BMS_OverTemp.append(n[7])
-    BMS_NoDataOnStartup.append(n[8])
-
+        BMS_PreChargeTimeout.append(n[2])
+        BMS_LTC_LossOfSignal.append(n[3])
+        BMS_OverVoltage.append(n[4])
+        BMS_UnderVoltage.append(n[5])
+        BMS_OverCurrent.append(n[6])
+        BMS_OverTemp.append(n[7])
+        BMS_NoDataOnStartup.append(n[8])
     # Battery
-    BMS_Battery_Current.append(n[9])
-    BMS_Battery_Voltage.append(n[10])
-    # else:
-    #     for data_of_interest in [speeds, position, rpms, slope, accelerometer]:
-            # data_of_interest.append(data_of_interest[-1]+data_of_interest[-1]*random.uniform(-0.0001,0.0001))
+        BMS_Battery_Current.append(n[9])
+        BMS_Battery_Voltage.append(n[10])
     return times, BMS_State, BMS_PreChargeTimeout, BMS_LTC_LossOfSignal, BMS_OverVoltage, BMS_UnderVoltage, BMS_OverCurrent, BMS_OverTemp, BMS_NoDataOnStartup, BMS_Battery_Current, BMS_Battery_Voltage
 
 times, BMS_State, BMS_PreChargeTimeout, BMS_LTC_LossOfSignal, BMS_OverVoltage, BMS_UnderVoltage, BMS_OverCurrent, BMS_OverTemp, BMS_NoDataOnStartup, BMS_Battery_Current, BMS_Battery_Voltage =  update_obd_values(times, BMS_State, BMS_PreChargeTimeout, BMS_LTC_LossOfSignal, BMS_OverVoltage, BMS_UnderVoltage, BMS_OverCurrent, BMS_OverTemp, BMS_NoDataOnStartup, BMS_Battery_Current, BMS_Battery_Voltage)

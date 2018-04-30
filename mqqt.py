@@ -2,8 +2,6 @@ import paho.mqtt.client as mqtt
 import psycopg2
 import configparser
 
-
-
 # Read database credentials
 config = configparser.ConfigParser()
 config.read("psql.conf")
@@ -29,6 +27,7 @@ psql_pwd = ConfigSectionMap("Credentials")['password']
 # Connect to database
 try:
     conn = psycopg2.connect(dbname=psql_db, user=psql_user, password=psql_pwd)
+    print("Connected to database")
 except:
     print("I am unable to connect to the database.")
 
@@ -48,6 +47,7 @@ def parse_mqtt_message(message):
     messageSplit = newMessage.split(',')
     return messageSplit
     print(messageSplit[1])
+    messageplit[10] = int(messagesplit[10])
     print(messageSplit)
 
 # The callback for when a PUBLISH message is received from the server.
@@ -73,7 +73,8 @@ client.on_message = on_message
 client.connect("129.241.91.125", 1883, 60)
 client.subscribe("Fuelfighter")
 
-client.publish("Fuelfighter", "211,1,1,0,1,0,1,0,1,162222,122222")
+client.publish("Fuelfighter", "1,1,0,1,0,1,2,3,1,4,10000")
+
 
 # Blocking call that processes network traffic, dispatches callbacks and
 # handles reconnecting.
