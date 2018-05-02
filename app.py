@@ -17,21 +17,19 @@ import psycopg2
 import configparser
 from datetime import datetime as dt
 
-
 app = dash.Dash(__name__)
 server = app.server
-
-# Caching for better performance
-cache = Cache(server, config={
-    # try 'filesystem' if you don't want to setup redis
-    'CACHE_TYPE': 'redis',
-    'CACHE_REDIS_URL': os.environ.get('REDIS_URL', '')
-    })
 app.config.suppress_callback_exceptions = True
 
 # Read database credentials
 config = configparser.ConfigParser()
 config.read("/var/www/Fuel-Fighter-Visualization/psql.conf")
+
+mapbox_access_token = 'pk.eyJ1IjoiY293bGVyIiwiYSI6ImNqZ293dGw1ejQwN2EyeHM3d3o1aGtiYWcifQ.-sdW6CTRqYgSNKGNfK0gpQ'
+df = pd.read_csv(
+    'https://raw.githubusercontent.com/plotly' +
+    '/datasets/master/2011_february_us_airport_traffic.csv')
+
 
 def ConfigSectionMap(section):
     dict1 = {}
@@ -73,8 +71,8 @@ BMS_Battery_Current = deque(maxlen=max_length)
 BMS_Battery_Voltage = deque(maxlen=max_length)
 
 data_dict_graphs = {
-        "BMS_Battery_Current": BMS_Battery_Current, # int
-        "BMS_Battery_Voltage": BMS_Battery_Voltage # int
+        "BMS Battery Current": BMS_Battery_Current, # int
+        "BMS Battery Voltage": BMS_Battery_Voltage # int
         }
 
 data_dict = {
@@ -86,8 +84,8 @@ data_dict = {
         "BMS_OverCurrent": BMS_OverCurrent,# Boolean
         "BMS_OverTemp": BMS_OverTemp,# Boolean
         "BMS_NoDataOnStartup": BMS_NoDataOnStartup,# Boolean
-        "BMS_Battery_Current": BMS_Battery_Current, # int
-        "BMS_Battery_Voltage": BMS_Battery_Voltage # int
+        "BMS Battery Current": BMS_Battery_Current, # int
+        "BMS Battery Voltage": BMS_Battery_Voltage # int
         }
 
 status_data = ['BMS_PreChargeTimeout', 'BMS_LTC_LossOfSignal', 'BMS_OverVoltage', 'BMS_UnderVoltage', 'BMS_OverCurrent', 'BMS_OverTemp', 'BMS_NoDataOnStartup']
@@ -104,7 +102,7 @@ def append_data(n):
         BMS_OverCurrent.append(n[6])
         BMS_OverTemp.append(n[7])
         BMS_NoDataOnStartup.append(n[8])
-        # Battery
+        # BMS Battery
         BMS_Battery_Current.append(n[9])
         BMS_Battery_Voltage.append(n[10])
 
@@ -146,28 +144,41 @@ app.layout = html.Div([
     #dcc.Graph(id='live-update-graph-bar'),
     html.Div(children=html.Div(id='live-update-text'), className='row'),
     html.Div(id='live-update-text'),
+    html.Div(
+        className="nine columns",
+        children=dcc.Graph(
+            id='graph_map',
+            figure={
+                'data': [{
+                    'lat': [63.416479], 'lon': [10.410054], 'type': 'scattermapbox', 'mode':'markers', 'text':['Fuel fighter car'] 
+                }],
+                'layout': {
+                    'mapbox': {
+                        'accesstoken': (
+                            'pk.eyJ1IjoiY293bGVyIiwiYSI6ImNqZ293dGw1ejQwN2EyeHM3d3o1aGtiYWcifQ.-sdW6CTRqYgSNKGNfK0gpQ'
+                        )
+                    },
+                    'margin': {
+                        'l': 10, 'r': 10, 'b': 10, 't': 0
+                    },
+                    'center': {'lat':63.416479, 'lon':10.410054},
+                    'autosize': True,
+                    'zoom': 7
+                }
+            }
+        )
+    ),
     dcc.Interval(id='graph-update',interval=1000),
     html.Div(children=html.Div(id='info'), className='rows'),
+    ], className="container",style={'width':'98%','margin-left':10,'margin-right':10,'max-width':50000 })
 
-    ], className="container",style={'width':'98%','margin-left':10,'margin-right':10,'max-width':50000})
-
-
-# # BARS
-# @app.callback(Output('live-update-graph-bar', 'value'),
-#               events=[Event('graph-update', 'interval')])
-# def update_graph_bar():
-#     traces = list()
-#     for t in range(2):
-#         traces.append(plotly.graph_objs.Bar(
-#             x=[1, 2, 3, 4, 5],
-#             y=[(t + 1) * random() for i in range(5)],
-#             name='Bar {}'.format(t)
-#             ))
-#     layout = plotly.graph_objs.Layout(
-#     barmode='group'
-# )
-#     return {'data': traces, 'layout': layout}
-
+#NOT READY
+# @app.callback(
+#     Output('graph_map', 'children'),
+#     [Input('graph_map', 'selectedData')])
+# def display_data(selectedData):
+#     print("TOUCHED \n \n \n")
+#     return json.dumps(selectedData, indent=2)
 
 # TEXT
 @app.callback(
