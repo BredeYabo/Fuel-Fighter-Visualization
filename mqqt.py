@@ -52,19 +52,15 @@ def parse_mqtt_message(message):
 
 # The callback for when a PUBLISH message is received from the server.
 def on_message(client, userdata, msg):
-    print(msg.topic+" "+str(msg.payload))
-    #data = ((str(msg.payload)).replace("'", ""))[1:]
-    #data = (str(msg.payload))[1:]
-    #data = "1,1,1,0,1,0,1,0,1,16,21"
-    #query =  "INSERT INTO sensors (" + data + ");"
     messageString = (str(msg.payload))[1:]
     m = parse_mqtt_message(messageString)
-    times, BMS_State, BMS_PreChargeTimeout, BMS_LTC_LossOfSignal, BMS_OverVoltage, BMS_UnderVoltage, BMS_OverCurrent, BMS_OverTemp, BMS_NoDataOnStartup, BMS_Battery_Current, BMS_Battery_Voltage = m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8], m[9], m[10]
-    cur.execute('INSERT INTO sensors (times, BMS_State, BMS_PreChargeTimeout, BMS_LTC_LossOfSignal, BMS_OverVoltage,BMS_UnderVoltage,BMS_OverCurrent, BMS_OverTemp, BMS_NoDataOnStartup, BMS_Battery_Current, BMS_Battery_Voltage) VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)', (times, BMS_State, BMS_PreChargeTimeout, BMS_LTC_LossOfSignal, BMS_OverVoltage, BMS_UnderVoltage, BMS_OverCurrent, BMS_OverTemp, BMS_NoDataOnStartup, BMS_Battery_Current, BMS_Battery_Voltage))
-    conn.commit()
-    #file = open("sample.csv","a")
-    #file.write(messageString)
-
+    try:
+        print(msg.topic+" "+str(msg.payload))
+        cur.execute('INSERT INTO sensors (times, BMS_State, BMS_PreChargeTimeout, BMS_LTC_LossOfSignal, BMS_OverVoltage,BMS_UnderVoltage,BMS_OverCurrent, BMS_OverTemp, BMS_NoDataOnStartup, BMS_Battery_Current, BMS_Battery_Voltage) VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)', (m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8], m[9], m[10]))
+        conn.commit()
+    except: psycopg2.DatabaseError
+    if conn:
+        conn.rollback()
 
 client = mqtt.Client()
 client.on_connect = on_connect
@@ -72,9 +68,7 @@ client.on_message = on_message
 
 client.connect("129.241.91.125", 1883, 60)
 client.subscribe("Fuelfighter")
-
-client.publish("Fuelfighter", "1,1,0,1,0,1,2,3,1,4,10000")
-
+client.publish("Fuelfighter", "136,1,0,1,0,1,2,3,1,4,30000")
 
 # Blocking call that processes network traffic, dispatches callbacks and
 # handles reconnecting.

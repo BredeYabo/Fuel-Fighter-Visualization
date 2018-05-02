@@ -9,6 +9,7 @@ import random
 from collections import deque
 from dash.dependencies import Input, Output, Event
 from pandas_datareader.data import DataReader
+import plotly
 import plotly.graph_objs as go
 import numpy as np
 import pandas as pd
@@ -19,9 +20,6 @@ from datetime import datetime as dt
 
 app = dash.Dash(__name__)
 server = app.server
-
-# Start receiving messages
-# os.system("python3 mqqt.py 1")
 
 # Caching for better performance
 cache = Cache(server, config={
@@ -34,7 +32,6 @@ app.config.suppress_callback_exceptions = True
 # Read database credentials
 config = configparser.ConfigParser()
 config.read("/var/www/Fuel-Fighter-Visualization/psql.conf")
-a = 10
 
 def ConfigSectionMap(section):
     dict1 = {}
@@ -75,6 +72,11 @@ BMS_NoDataOnStartup = deque(maxlen=max_length)
 BMS_Battery_Current = deque(maxlen=max_length)
 BMS_Battery_Voltage = deque(maxlen=max_length)
 
+data_dict_graphs = {
+        "BMS_Battery_Current": BMS_Battery_Current, # int
+        "BMS_Battery_Voltage": BMS_Battery_Voltage # int
+        }
+
 data_dict = {
         "BMS State": BMS_State, # (0/1/2/3)
         "BMS_PreChargeTimeout": BMS_PreChargeTimeout, # Boolean
@@ -88,17 +90,13 @@ data_dict = {
         "BMS_Battery_Voltage": BMS_Battery_Voltage # int
         }
 
-def update_obd_values(times, BMS_State, BMS_PreChargeTimeout, BMS_LTC_LossOfSignal, BMS_OverVoltage, BMS_UnderVoltage, BMS_OverCurrent, BMS_OverTemp, BMS_NoDataOnStartup, BMS_Battery_Current, BMS_Battery_Voltage):
-    cur.execute("SELECT * FROM sensors ORDER BY times desc limit 1;")
-    n = cur.fetchone()
-    print(n)
-    old_data = []
+status_data = ['BMS_PreChargeTimeout', 'BMS_LTC_LossOfSignal', 'BMS_OverVoltage', 'BMS_UnderVoltage', 'BMS_OverCurrent', 'BMS_OverTemp', 'BMS_NoDataOnStartup']
 
-    if(n != old_data):
-        old_data = n
+def append_data(n):
+    if(times.count(n[0]) == 0):
         times.append(n[0])
         BMS_State.append(n[1])
-    # Error flags
+        # Error flags
         BMS_PreChargeTimeout.append(n[2])
         BMS_LTC_LossOfSignal.append(n[3])
         BMS_OverVoltage.append(n[4])
@@ -106,32 +104,133 @@ def update_obd_values(times, BMS_State, BMS_PreChargeTimeout, BMS_LTC_LossOfSign
         BMS_OverCurrent.append(n[6])
         BMS_OverTemp.append(n[7])
         BMS_NoDataOnStartup.append(n[8])
-    # Battery
+        # Battery
         BMS_Battery_Current.append(n[9])
         BMS_Battery_Voltage.append(n[10])
-    return times, BMS_State, BMS_PreChargeTimeout, BMS_LTC_LossOfSignal, BMS_OverVoltage, BMS_UnderVoltage, BMS_OverCurrent, BMS_OverTemp, BMS_NoDataOnStartup, BMS_Battery_Current, BMS_Battery_Voltage
 
+
+def update_obd_values(times, BMS_State, BMS_PreChargeTimeout, BMS_LTC_LossOfSignal, BMS_OverVoltage, BMS_UnderVoltage, BMS_OverCurrent, BMS_OverTemp, BMS_NoDataOnStartup, BMS_Battery_Current, BMS_Battery_Voltage):
+    cur.execute("SELECT * FROM sensors ORDER BY times desc limit 50;")
+    n = cur.fetchall()
+    old_time = -1
+    if times:
+        old_time = times.pop()
+        times.append(old_time)
+        if(str(n[0][0]) != str(old_time)):
+            append_data(n[0])
+            #append_last_data(n[0])
+
+    else:
+        #append_last_data(n[0])
+        for i in range(len(n)-1, 0, -1):
+            append_data(n[i])
+
+
+    return times, BMS_State, BMS_PreChargeTimeout, BMS_LTC_LossOfSignal, BMS_OverVoltage, BMS_UnderVoltage, BMS_OverCurrent, BMS_OverTemp, BMS_NoDataOnStartup, BMS_Battery_Current, BMS_Battery_Voltage
 times, BMS_State, BMS_PreChargeTimeout, BMS_LTC_LossOfSignal, BMS_OverVoltage, BMS_UnderVoltage, BMS_OverCurrent, BMS_OverTemp, BMS_NoDataOnStartup, BMS_Battery_Current, BMS_Battery_Voltage =  update_obd_values(times, BMS_State, BMS_PreChargeTimeout, BMS_LTC_LossOfSignal, BMS_OverVoltage, BMS_UnderVoltage, BMS_OverCurrent, BMS_OverTemp, BMS_NoDataOnStartup, BMS_Battery_Current, BMS_Battery_Voltage)
 
 app.layout = html.Div([
     html.Div([
-        html.H2('DNV GL Fuel Fighter Vehicle Data',
-            style={'float': 'left','color': '#0000FF'
+        html.H1('DNV GL Fuel Fighter Vehicle Data',
+            style={'float': 'middle','color': '#0000FF'
                        }),
         ]),
-    dcc.Dropdown(id='vehicle-data-name',
-                 options=[{'label': s, 'value': s}
-                          for s in data_dict.keys()],
-                 value=['BMS_State','BMS_UnderVoltage'],
-                 multi=True
+
+   dcc.Dropdown(id='vehicle-data-name', options=[{'label': s, 'value': s} for s in data_dict_graphs.keys()],
+                 multi=True,
+                 clearable=False,
+                 placeholder="Select a component"
                  ),
+
     html.Div(children=html.Div(id='graphs'), className='row'),
-    dcc.Interval(
-        id='graph-update',
-        interval=1000),
+    #dcc.Graph(id='live-update-graph-bar'),
+    html.Div(children=html.Div(id='live-update-text'), className='row'),
+    html.Div(id='live-update-text'),
+    dcc.Interval(id='graph-update',interval=1000),
+    html.Div(children=html.Div(id='info'), className='rows'),
+
     ], className="container",style={'width':'98%','margin-left':10,'margin-right':10,'max-width':50000})
 
 
+# # BARS
+# @app.callback(Output('live-update-graph-bar', 'value'),
+#               events=[Event('graph-update', 'interval')])
+# def update_graph_bar():
+#     traces = list()
+#     for t in range(2):
+#         traces.append(plotly.graph_objs.Bar(
+#             x=[1, 2, 3, 4, 5],
+#             y=[(t + 1) * random() for i in range(5)],
+#             name='Bar {}'.format(t)
+#             ))
+#     layout = plotly.graph_objs.Layout(
+#     barmode='group'
+# )
+#     return {'data': traces, 'layout': layout}
+
+
+# TEXT
+@app.callback(
+    dash.dependencies.Output('live-update-text','children'),
+    events=[dash.dependencies.Event('graph-update', 'interval')]
+    )
+def update_metrics():
+    last_BMS_battery_voltage = BMS_Battery_Voltage.pop()
+    BMS_Battery_Voltage.append(last_BMS_battery_voltage)
+    last_BMS_battery_current = BMS_Battery_Current.pop()
+    BMS_Battery_Current.append(last_BMS_battery_current)
+    last_BMS_State = BMS_State.pop()
+    BMS_State.append(last_BMS_State)
+    last_BMS_PreChargeTimeout = BMS_PreChargeTimeout.pop()
+    BMS_PreChargeTimeout.append(last_BMS_PreChargeTimeout)
+    last_BMS_OverVoltage = BMS_OverVoltage.pop()
+    BMS_OverVoltage.append(last_BMS_OverVoltage)
+    last_BMS_UnderVoltage = BMS_UnderVoltage.pop()
+    BMS_UnderVoltage.append(last_BMS_UnderVoltage)
+    last_BMS_OverCurrent = BMS_OverCurrent.pop()
+    BMS_OverCurrent.append(last_BMS_OverCurrent)
+    last_BMS_OverTemp = BMS_OverTemp.pop()
+    BMS_OverTemp.append(last_BMS_OverTemp)
+    last_BMS_NoDataOnStartup = BMS_NoDataOnStartup.pop()
+    BMS_NoDataOnStartup.append(last_BMS_NoDataOnStartup)
+    last_BMS_LTC_LossOfSignal = BMS_LTC_LossOfSignal.pop()
+    BMS_LTC_LossOfSignal.append(last_BMS_LTC_LossOfSignal)
+
+    lon, lat, alt = 1000, 10000, 100000
+    style = {'padding': '5px', 'fontSize': '16px'}
+    class_choice = 'col s12'
+    Title = 'This is a livestream of different datapoints read from the fuelfighter car sensors. '
+    Title_status = 'Important status updates'
+
+    BMS_voltage_div = 'Battery voltage: ' + str(last_BMS_battery_voltage)
+    BMS_current_div = 'Battery current: ' + str(last_BMS_battery_current)
+    BMS_state_div = 'BMS state: ' + str(last_BMS_State)
+    BMS_PreChargeTimeout_div = 'BMS PreChargeTimeout: ' + str(last_BMS_PreChargeTimeout)
+    BMS_OverVoltage_div = 'BMS OverVoltage: ' + str(last_BMS_OverVoltage)
+    BMS_UnderVoltage_div = 'BMS UnderVoltage: ' + str(last_BMS_UnderVoltage)
+    BMS_OverCurrent_div = 'BMS OverCurrent: ' + str(last_BMS_OverCurrent)
+    BMS_OverTemp_div = 'BMS OverTemp: ' + str(last_BMS_OverTemp)
+    BMS_NoDataOnStartup_div = 'BMS NoDataOnStartup: ' + str(last_BMS_NoDataOnStartup)
+    BMS_LTC_LossOfSignal_div = 'BMS LTC_LossOfSignal: ' + str(last_BMS_LTC_LossOfSignal)
+    output = (
+        html.Div([html.Div(Title, style={'color': 'blue', 'fontSize': 30}),
+                  html.Div(BMS_voltage_div, style={'fontSize': 14}),
+                  html.Div(BMS_current_div, style={'fontSize': 14}),
+                  html.Div(Title_status, style={'color': 'blue', 'fontSize': 30}),
+                  html.Div([
+                      html.Div(BMS_state_div),
+                      html.Div(BMS_PreChargeTimeout_div),
+                      html.Div(BMS_OverVoltage_div),
+                      html.Div(BMS_UnderVoltage_div),
+                      html.Div(BMS_OverCurrent_div),
+                      html.Div(BMS_OverTemp_div),
+                      html.Div(BMS_NoDataOnStartup_div),
+                      html.Div(BMS_LTC_LossOfSignal_div)
+                      ], style={'fontSize': 14})
+                      ]))
+    return output
+
+# SCATTER
 @app.callback(
     dash.dependencies.Output('graphs','children'),
     [dash.dependencies.Input('vehicle-data-name', 'value')],
@@ -140,31 +239,59 @@ app.layout = html.Div([
 def update_graph(data_names):
     graphs = []
     update_obd_values(times, BMS_State, BMS_PreChargeTimeout, BMS_LTC_LossOfSignal, BMS_OverVoltage, BMS_UnderVoltage, BMS_OverCurrent, BMS_OverTemp, BMS_NoDataOnStartup, BMS_Battery_Current, BMS_Battery_Voltage)
-    if len(data_names)>2:
-        class_choice = 'col s12 m6 l4'
-    elif len(data_names) == 2:
-        class_choice = 'col s12 m6 l6'
-    else:
+    if data_names:
+        # if len(data_names)>2:
+        #     class_choice = 'col s12 m6 l4'
+        # elif len(data_names) == 2:
+        #     class_choice = 'col s12 m6 l6'
+        #else:
         class_choice = 'col s12'
 
-    for data_name in data_names:
-        data = go.Scatter(
-            x=list(times),
-            y=list(data_dict[data_name]),
-            name='Scatter',
-            fill="tozeroy",
-            fillcolor="#6897bb"
-            )
-        graphs.append(html.Div(dcc.Graph(
-            id=data_name,
-            animate=True,
-            figure={'data': [data],'layout' : go.Layout(xaxis=dict(range=[min(times),max(times)]),
-                                                        yaxis=dict(range=[min(data_dict[data_name]),max(data_dict[data_name])]),
-                                                        margin={'l':50,'r':1,'t':45,'b':1},
-                                                        title='{}'.format(data_name))}
-            ), className=class_choice))
+        status_dict = []
+
+        for data_name in data_names:
+            if(data_name in status_data): # We won't display status updates as graphs
+                old_data = data_dict[data_name].pop()
+                data_dict[data_name].append(old_data)
+
+                # data = go.Bar(
+                #     x=list(data_name),
+                #     y=list([old_data])
+                # )
+                # graphs.append(html.Div(dcc.Graph(
+                #     id=data_name,
+                #     figure={'data': [data],'layout' : go.Layout(title='{}'.format(data_name))}
+                # ), className=class_choice))
+            else:
+                data = go.Scatter(
+                    x=list(times),
+                    y=list(data_dict[data_name]),
+                    name='Scatter',
+                    fill="tozeroy",
+                    fillcolor="#6897bb"
+                )
+                graphs.append(html.Div(dcc.Graph(
+                    id=data_name,
+                    animate=True,
+                    figure={'data': [data],'layout' : go.Layout(xaxis=dict(range=[min(times),max(times)]),
+                                                                yaxis=dict(range=[0,max(data_dict[data_name])*1.1]),
+                                                                title='{}'.format(data_name))}
+                ), className=class_choice))
 
     return graphs
+# external_css = ["https://fonts.googleapis.com/css?family=Product+Sans:400,400i,700,700i",
+#                 "https://cdn.rawgit.com/plotly/dash-app-stylesheets/2cc54b8c03f4126569a3440aae611bbef1d7a5dd/stylesheet.css"]
+
+
+# for css in external_css:
+#     app.css.append_css({"external_url": css})
+
+
+# if 'DYNO' in os.environ:
+#     app.scripts.append_script({
+#         'external_url': 'https://cdn.rawgit.com/chriddyp/ca0d8f02a1659981a0ea7f013a378bbd/raw/e79f3f789517deec58f41251f7dbb6bee72c44ab/plotly_ga.js'
+#     })
+
 external_css = ["https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.2/css/materialize.min.css"]
 for css in external_css:
     app.css.append_css({"external_url": css})
