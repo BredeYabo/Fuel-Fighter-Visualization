@@ -30,7 +30,6 @@ df = pd.read_csv(
     'https://raw.githubusercontent.com/plotly' +
     '/datasets/master/2011_february_us_airport_traffic.csv')
 
-
 def ConfigSectionMap(section):
     dict1 = {}
     options = config.options(section)
@@ -150,7 +149,7 @@ app.layout = html.Div([
             id='graph_map',
             figure={
                 'data': [{
-                    'lat': [63.416479], 'lon': [10.410054], 'type': 'scattermapbox', 'mode':'markers', 'text':['Fuel fighter car'] 
+                    'lat': [63.416479], 'lon': [10.410054], 'type': 'scattermapbox', 'mode':'markers', 'text':['Fuel fighter car']
                 }],
                 'layout': {
                     'mapbox': {
@@ -181,6 +180,21 @@ app.layout = html.Div([
 #     return json.dumps(selectedData, indent=2)
 
 # TEXT
+
+def state_definition(state):
+    if state == 0:
+        state = 'Idle'
+    elif State == 1:
+        state = 'PreCharge'
+    elif State == 2:
+        state = 'Battery Active'
+    elif State == 3:
+        state = 'Error'
+    else:
+        state = 'StateStatus Error'
+    return state
+
+
 @app.callback(
     dash.dependencies.Output('live-update-text','children'),
     events=[dash.dependencies.Event('graph-update', 'interval')]
@@ -188,24 +202,56 @@ app.layout = html.Div([
 def update_metrics():
     last_BMS_battery_voltage = BMS_Battery_Voltage.pop()
     BMS_Battery_Voltage.append(last_BMS_battery_voltage)
+
     last_BMS_battery_current = BMS_Battery_Current.pop()
     BMS_Battery_Current.append(last_BMS_battery_current)
+
     last_BMS_State = BMS_State.pop()
     BMS_State.append(last_BMS_State)
+    last_BMS_State = state_definition(last_BMS_State)
+
     last_BMS_PreChargeTimeout = BMS_PreChargeTimeout.pop()
     BMS_PreChargeTimeout.append(last_BMS_PreChargeTimeout)
+    last_BMS_PreChargeTimeout = bool(last_BMS_PreChargeTimeout)
+
     last_BMS_OverVoltage = BMS_OverVoltage.pop()
     BMS_OverVoltage.append(last_BMS_OverVoltage)
+    last_BMS_OverVoltage = bool(last_BMS_OverVoltage)
+
     last_BMS_UnderVoltage = BMS_UnderVoltage.pop()
     BMS_UnderVoltage.append(last_BMS_UnderVoltage)
+    last_BMS_UnderVoltage = bool(last_BMS_UnderVoltage)
+
     last_BMS_OverCurrent = BMS_OverCurrent.pop()
     BMS_OverCurrent.append(last_BMS_OverCurrent)
+    last_BMS_OverCurrent = bool(last_BMS_OverCurrent)
+
     last_BMS_OverTemp = BMS_OverTemp.pop()
     BMS_OverTemp.append(last_BMS_OverTemp)
+    last_BMS_OverTemp = bool(last_BMS_OverTemp )
+
     last_BMS_NoDataOnStartup = BMS_NoDataOnStartup.pop()
     BMS_NoDataOnStartup.append(last_BMS_NoDataOnStartup)
+    last_BMS_NoDataOnStartup = bool(last_BMS_NoDataOnStartup)
+
     last_BMS_LTC_LossOfSignal = BMS_LTC_LossOfSignal.pop()
     BMS_LTC_LossOfSignal.append(last_BMS_LTC_LossOfSignal)
+    last_BMS_LTC_LossOfSignal = bool(last_BMS_LTC_LossOfSignal)
+
+    data = [
+        {
+            'values': [1],
+            'type': 'pie',
+        },
+    ]
+
+    class_choice = 'col s12'
+    colors = ['#FEBFB3', '#E1396C', '#96D38C', '#D0F9B1']
+    trace = go.Pie(labels='BMS_state', values=1, hoverinfo='label+percent', textinfo='value', textfont=dict(size=20), marker=dict(colors='#0000FF', line=dict(color='#000000', width=2)))
+    trace_graph = html.Div(dcc.Graph(
+                    id='BMS_status',
+                    animate=True,
+                    figure={'data': [trace]}, className=class_choice))
 
     lon, lat, alt = 1000, 10000, 100000
     style = {'padding': '5px', 'fontSize': '16px'}
@@ -229,16 +275,32 @@ def update_metrics():
                   html.Div(BMS_current_div, style={'fontSize': 14}),
                   html.Div(Title_status, style={'color': 'blue', 'fontSize': 30}),
                   html.Div([
-                      html.Div(BMS_state_div),
+                      html.Div([BMS_state_div]),
                       html.Div(BMS_PreChargeTimeout_div),
                       html.Div(BMS_OverVoltage_div),
                       html.Div(BMS_UnderVoltage_div),
                       html.Div(BMS_OverCurrent_div),
                       html.Div(BMS_OverTemp_div),
                       html.Div(BMS_NoDataOnStartup_div),
-                      html.Div(BMS_LTC_LossOfSignal_div)
-                      ], style={'fontSize': 14})
-                      ]))
+                      html.Div(BMS_LTC_LossOfSignal_div),
+                      html.Div(dcc.Graph(
+                          id='graph',
+                          figure={
+                              'data': data,
+                              'layout': {
+                                  'margin': {
+                                      'l': 30,
+                                      'r': 0,
+                                      'b': 30,
+                                      't': 0
+                                  },
+                                  'legend': {'x': 0, 'y': 1}
+                              }
+                          }
+                      )
+                )
+                  ], style={'fontSize': 14})
+        ]))
     return output
 
 # SCATTER
